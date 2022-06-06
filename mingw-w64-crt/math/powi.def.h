@@ -76,7 +76,7 @@ __FLT_ABI(__powi) (__FLT_TYPE x, int y)
 {
   int x_class = fpclassify (x);
   int odd_y = y & 1;
-  __FLT_TYPE d, rslt;
+  __FLT_TYPE rslt;
 
   if (y == 0 || x == __FLT_CST(1.0))
     return __FLT_CST(1.0);
@@ -121,33 +121,41 @@ __FLT_ABI(__powi) (__FLT_TYPE x, int y)
       return (odd_y && signbit(x) ? -__FLT_HUGE_VAL : __FLT_HUGE_VAL);
     }
 
-  d = __FLT_ABI(fabs) (x);
 
-  if (y < 0)
+    // credit: llvm/llvm-project
+    // This project uses source code from the files llvm-project/compiler-rt/lib/builtins/powidf2.c  
+    // from https://github.com/llvm/llvm-project/blob/1483fb33b314ae02ec96b735c5ff15ce595322bf/compiler-rt/lib/builtins/powidf2.c
+    // Copyright (c) 2009-2015 by the contributors listed in CREDITS.TXT
+    // CREDITS.TXT: https://github.com/llvm/llvm-project/blob/1483fb33b314ae02ec96b735c5ff15ce595322bf/compiler-rt/CREDITS.TXT
+    // licensed under the Apache 2.0 license. 
+    // Followed by the whole Apache 2.0 license text.
+    // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+    // See https://llvm.org/LICENSE.txt for license information.
+    // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+
+    const int recip = y < 0;
+    __FLT_TYPE r = 1;
+    int overflow = abs(y) * log(__FLT_ABI(fabs) (x)) > (sizeof(__FLT_TYPE) * 8 - 1) * __FLT_LOGE2;
+
+    if (recip && overflow)
     {
-      d = __FLT_CST(1.0) / d;
-      y = -y;
+        x = 1 / x;
+        y = -y;
     }
 
-  if (!y)
-    rslt = __FLT_CST(1.0);
-  else if (y == 1)
-    rslt = d;
-  else
-    {
-      unsigned int u = (unsigned int) y;
-      rslt = ((u & 1) != 0) ? d : __FLT_CST(1.0);
-      u >>= 1;
-      do
-	{
-	  d *= d;
-	  if ((u & 1) != 0)
-	    rslt *= d;
-	  u >>= 1;
-	}
-      while (u > 0);
+    while (1) {
+        if (y & 1)
+            r *= x;
+        y /= 2;
+        if (y == 0)
+            break;
+        x *= x;
     }
-  if (signbit (x) && odd_y)
-    rslt = -rslt;
-  return rslt;
+
+	if(recip) {
+		return overflow ? r : 1/r;
+	} else {
+		return r;
+}
 }
