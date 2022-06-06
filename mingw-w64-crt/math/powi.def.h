@@ -121,33 +121,20 @@ __FLT_ABI(__powi) (__FLT_TYPE x, int y)
       return (odd_y && signbit(x) ? -__FLT_HUGE_VAL : __FLT_HUGE_VAL);
     }
 
-  d = __FLT_ABI(fabs) (x);
 
-  if (y < 0)
-    {
-      d = __FLT_CST(1.0) / d;
-      y = -y;
-    }
+    double a = x;
+    int b = y;
 
-  if (!y)
-    rslt = __FLT_CST(1.0);
-  else if (y == 1)
-    rslt = d;
-  else
-    {
-      unsigned int u = (unsigned int) y;
-      rslt = ((u & 1) != 0) ? d : __FLT_CST(1.0);
-      u >>= 1;
-      do
-	{
-	  d *= d;
-	  if ((u & 1) != 0)
-	    rslt *= d;
-	  u >>= 1;
-	}
-      while (u > 0);
+    const int recip = b < 0;
+    double r = 1;
+    while (1) {
+        if (b & 1)
+            r *= a;
+        b /= 2;
+        if (b == 0)
+            break;
+        a *= a;
     }
-  if (signbit (x) && odd_y)
-    rslt = -rslt;
-  return rslt;
+    return recip ? 1 / r : r;
+
 }
