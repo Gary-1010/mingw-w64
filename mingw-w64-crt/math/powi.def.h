@@ -122,18 +122,27 @@ __FLT_ABI(__powi) (__FLT_TYPE x, int y)
     }
 
 
-    double a = x;
-    int b = y;
+    // credit: llvm/llvm-project
+    // This project uses source code from the files llvm-project/compiler-rt/lib/builtins/powidf2.c  
+    // from https://github.com/llvm/llvm-project/blob/1483fb33b314ae02ec96b735c5ff15ce595322bf/compiler-rt/lib/builtins/powidf2.c
+    // Copyright (c) 2009-2015 by the contributors listed in CREDITS.TXT
+    // CREDITS.TXT: https://github.com/llvm/llvm-project/blob/1483fb33b314ae02ec96b735c5ff15ce595322bf/compiler-rt/CREDITS.TXT
+    // licensed under the Apache 2.0 license. 
+    // Followed by the whole Apache 2.0 license text.
+    // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+    // See https://llvm.org/LICENSE.txt for license information.
+    // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-    const int recip = b < 0;
+
+    const int recip = y < 0;
     double r = 1;
     while (1) {
-        if (b & 1)
-            r *= a;
-        b /= 2;
-        if (b == 0)
+        if (y & 1)
+            r *= x;
+        y /= 2;
+        if (y == 0)
             break;
-        a *= a;
+        x *= x;
     }
     return recip ? 1 / r : r;
 
