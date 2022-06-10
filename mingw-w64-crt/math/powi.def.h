@@ -136,14 +136,37 @@ __FLT_ABI(__powi) (__FLT_TYPE x, int y)
 
     const int recip = y < 0;
     double r = 1;
+    double a_ = a;
+    int b_ = b;
+
+
     while (1) {
-        if (y & 1)
-            r *= x;
-        y /= 2;
-        if (y == 0)
+        if (b & 1)
+            r *= a;
+        b /= 2;
+        if (b == 0)
             break;
-        x *= x;
+        a *= a;
     }
+
+    if (recip && fpclassify(r) == FP_INFINITE)
+    {
+        printf("in\n");
+        a = 1 / a_;
+        b = abs(b_);
+        r = 1;
+
+        while (1) {
+            if (b & 1)
+                r *= a;
+            b /= 2;
+            if (b == 0)
+                break;
+            a *= a;
+        }
+        return r;
+    }
+    
     return recip ? 1 / r : r;
 
 }
