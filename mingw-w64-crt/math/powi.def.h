@@ -76,7 +76,7 @@ __FLT_ABI(__powi) (__FLT_TYPE x, int y)
 {
   int x_class = fpclassify (x);
   int odd_y = y & 1;
-  __FLT_TYPE d, rslt;
+  __FLT_TYPE rslt;
 
   if (y == 0 || x == __FLT_CST(1.0))
     return __FLT_CST(1.0);
@@ -135,38 +135,27 @@ __FLT_ABI(__powi) (__FLT_TYPE x, int y)
 
 
     const int recip = y < 0;
-    double r = 1;
-    double a_ = a;
-    int b_ = b;
+    __FLT_TYPE r = 1;
+    int overflow = abs(y) * log(__FLT_ABI(fabs) (x)) > (sizeof(__FLT_TYPE) * 8 - 1) * __FLT_LOGE2;
 
+    if (recip && overflow)
+    {
+        x = 1 / x;
+        y = -y;
+    }
 
     while (1) {
-        if (b & 1)
-            r *= a;
-        b /= 2;
-        if (b == 0)
+        if (y & 1)
+            r *= x;
+        y /= 2;
+        if (y == 0)
             break;
-        a *= a;
+        x *= x;
     }
 
-    if (recip && fpclassify(r) == FP_INFINITE)
-    {
-        printf("in\n");
-        a = 1 / a_;
-        b = abs(b_);
-        r = 1;
-
-        while (1) {
-            if (b & 1)
-                r *= a;
-            b /= 2;
-            if (b == 0)
-                break;
-            a *= a;
-        }
+    if (recip && overflow)
         return r;
-    }
-    
+
     return recip ? 1 / r : r;
 
 }
