@@ -153,9 +153,9 @@ __FLT_ABI(__powi) (__FLT_TYPE x, int y)
         x *= x;
     }
 
-    if (recip && overflow)
-        return r;
-
-    return recip ? 1 / r : r;
-
+	if(recip) {
+		return overflow ? r : 1/r;
+	} else {
+		return r;
+}
 }
