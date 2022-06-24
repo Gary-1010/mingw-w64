@@ -122,40 +122,122 @@ __FLT_ABI(__powi) (__FLT_TYPE x, int y)
     }
 
 
-    // credit: llvm/llvm-project
-    // This project uses source code from the files llvm-project/compiler-rt/lib/builtins/powidf2.c  
-    // from https://github.com/llvm/llvm-project/blob/1483fb33b314ae02ec96b735c5ff15ce595322bf/compiler-rt/lib/builtins/powidf2.c
-    // Copyright (c) 2009-2015 by the contributors listed in CREDITS.TXT
-    // CREDITS.TXT: https://github.com/llvm/llvm-project/blob/1483fb33b314ae02ec96b735c5ff15ce595322bf/compiler-rt/CREDITS.TXT
-    // licensed under the Apache 2.0 license. 
-    // Followed by the whole Apache 2.0 license text.
-    // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-    // See https://llvm.org/LICENSE.txt for license information.
-    // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+    // credit: netlib.org/cephes
+    // This project uses source code from the files cephes/cmath/powi.c  
+    // from https://www.netlib.org/cephes/
+    // Cephes Math Library Release 2.8:  June, 2000
+    // Copyright 1984, 1995, 2000 by Stephen L. Moshier
 
 
-    const int recip = y < 0;
-    __FLT_TYPE r = 1;
-    int overflow = abs(y) * log(__FLT_ABI(fabs) (x)) > (sizeof(__FLT_TYPE) * 8 - 1) * __FLT_LOGE2;
+    int n, e, sign, asign, lx;
+    __FLT_TYPE w, s;
 
-    if (recip && overflow)
+    if( y == -1 )
+	    return( __FLT_CST(1.0)/x );
+
+
+    /* check x sign */
+    if( x < __FLT_CST(0.0) )
+	{
+	    asign = -1;
+	    x = -x;
+	}
+    else
+	    asign = 0;
+
+
+    /* check y sign */
+    if( y < 0 )
+	{
+        sign = -1;
+        n = -y;
+	}
+    else
+	{
+        sign = 1;
+        n = y;
+	}
+
+    /* Even power will be positive. */
+    if( (n & 1) == 0 )
+	    asign = 0;
+
+
+    /* Overflow detection */
+
+    /* Calculate approximate logarithm of answer */
+    s = __FLT_ABI(frexp)( x, &lx );
+    e = (lx - 1)*n;
+    if( (e == 0) || (e > 64) || (e < -64) )
     {
-        x = 1 / x;
-        y = -y;
+        s = (s - __FLT_ABI(7.0710678118654752e-1)) / (s + __FLT_ABI(7.0710678118654752e-1));
+        s = (__FLT_ABI(2.9142135623730950) * s - __FLT_ABI(0.5) + lx) * y * __FLT_LOGE2;
+    }
+    else
+    {
+        s = __FLT_LOGE2 * e;
     }
 
-    while (1) {
-        if (y & 1)
-            r *= x;
-        y /= 2;
-        if (y == 0)
-            break;
-        x *= x;
+
+    if( s > __FLT_MAXLOG )
+	{
+        rslt = __FLT_HUGE_VAL;
+        goto done;
     }
 
-	if(recip) {
-		return overflow ? r : 1/r;
-	} else {
-		return r;
-}
+
+    if( s < __FLT_MINLOG )
+	{
+        rslt = __FLT_CST(0.0);
+        goto done;
+	}
+
+
+    /* Handle tiny denormal answer, but with less accuracy
+    * since roundoff error in 1.0/x will be amplified.
+    * The precise demarcation should be the gradual underflow threshold.
+    */
+    if( (s < (-__FLT_MAXLOG+__FLT_CST(2.0))) && (sign < 0) )
+	{
+        x = __FLT_CST(1.0)/x;
+        sign = -sign;
+	}
+
+
+    /* First bit of the power */
+    if( n & 1 )
+        rslt = x;
+    else
+        rslt = __FLT_CST(1.0);
+
+
+    w = x;
+    n >>= 1;
+    while( n )
+    {
+        w = w * w;	/* arg to the 2-to-the-kth power */
+        if( n & 1 )	/* if that bit is set, then include in product */
+            rslt *= w;
+        n >>= 1;
+    }
+
+
+    if( sign < 0 )
+	    rslt = __FLT_CST(1.0)/rslt;
+
+
+    
+    done:
+
+    if( asign )
+    {
+        /* odd power of negative number */
+        if( rslt == 0.0 )
+            rslt = -__FLT_CST(0.0);
+        else
+            rslt = -rslt;
+    }
+    return(rslt);
+
 }
